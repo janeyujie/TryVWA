@@ -11,11 +11,17 @@ from typing import Any
 import aiolimiter
 import openai
 from openai import AsyncOpenAI, OpenAI
+import logging
+logger = logging.getLogger("logger")
+
+
+os.environ["OPENAI_BASE_URL"] = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+os.environ["OPENAI_API_KEY"] = "sk-80a5eac8321a4aa694552fd0f147437e"
 
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"], base_url=os.environ.get("OPENAI_BASE_URL"))
 aclient = AsyncOpenAI(api_key=os.environ["OPENAI_API_KEY"], base_url=os.environ.get("OPENAI_BASE_URL"))
+logger.info(f"[call_llm] OpenAI 客户端创建完毕。Base URL: {client.base_url}")
 from tqdm.asyncio import tqdm_asyncio
-
 
 def retry_with_exponential_backoff(  # type: ignore
     func,

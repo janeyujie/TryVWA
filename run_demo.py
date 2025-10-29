@@ -143,7 +143,7 @@ def config() -> argparse.Namespace:
 
     # lm config
     parser.add_argument("--provider", type=str, default="openai")
-    parser.add_argument("--model", type=str, default="gpt-4-vision-preview")
+    parser.add_argument("--model", type=str, default="qwen3-vl-plus")
     parser.add_argument("--mode", type=str, default="chat")
     parser.add_argument("--temperature", type=float, default=1.0)
     parser.add_argument("--top_p", type=float, default=0.9)

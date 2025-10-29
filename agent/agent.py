@@ -115,11 +115,12 @@ class PromptAgent(Agent):
         self.action_set_tag = action_set_tag
         self.captioning_fn = captioning_fn
 
+        self.multimodal_inputs = True
         # Check if the model is multimodal.
         if ("gemini" in lm_config.model or "gpt-4" in lm_config.model and "vision" in lm_config.model) and type(prompt_constructor) == MultimodalCoTPromptConstructor:
             self.multimodal_inputs = True
         else:
-            self.multimodal_inputs = False
+            self.multimodal_inputs = True
 
     def set_action_set_tag(self, tag: str) -> None:
         self.action_set_tag = tag
@@ -156,12 +157,16 @@ class PromptAgent(Agent):
 
         if self.multimodal_inputs:
             prompt = self.prompt_constructor.construct(
-                trajectory, intent, page_screenshot_img, images, meta_data
+                trajectory, intent, page_screenshot_img=page_screenshot_img, images=images, meta_data=meta_data
             )
         else:
             prompt = self.prompt_constructor.construct(
-                trajectory, intent, meta_data
+                trajectory, intent, images=images, meta_data=meta_data
             )
+        # import json
+        # print("----------- PROMPT TO BE SENT -----------")
+        # #print(json.dumps(prompt, indent=2))
+        # print("-----------------------------------------")
         lm_config = self.lm_config
         n = 0
         while True:
@@ -211,7 +216,7 @@ def construct_agent(args: argparse.Namespace, captioning_fn=None) -> Agent:
         with open(args.instruction_path) as f:
             constructor_type = json.load(f)["meta_data"]["prompt_constructor"]
         tokenizer = Tokenizer(args.provider, args.model)
-        prompt_constructor = eval(constructor_type)(
+        prompt_constructor = QwenVLPromptConstructor(
             args.instruction_path, lm_config=llm_config, tokenizer=tokenizer
         )
         agent = PromptAgent(

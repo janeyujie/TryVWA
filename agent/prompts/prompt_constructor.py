@@ -444,3 +444,83 @@ class MultimodalCoTPromptConstructor(CoTPromptConstructor):
             raise NotImplementedError(
                 f"Provider {self.lm_config.provider} not implemented"
             )
+
+
+class QwenVLPromptConstructor(MultimodalCoTPromptConstructor):
+    """
+    A specialized prompt constructor for Alibaba Qwen-VL models that require
+    a single 'user' message with all text and images combined.
+    This constructor overrides the default multimodal behavior to ensure
+    compatibility with the Qwen-VL API endpoint.
+    """
+
+    def get_lm_api_input(
+            self,
+            intro: str,
+            examples: list[tuple[str, str, str]],
+            current: str,
+            page_screenshot_img: Image.Image,
+            images: list[Image.Image],
+    ) -> APIInput:
+        """
+        Overrides the base method to construct a prompt specifically for Qwen-VL.
+        It combines all introductory text, examples, and the current observation
+        into a single text block, and appends all images to a single 'user' message.
+        """
+        # 1. 将所有文本信息聚合成一个大的字符串
+        # ----------------------------------------------------
+        full_text_prompt = []
+
+        # 添加引导语
+        full_text_prompt.append(intro)
+
+        # 添加 few-shot 示例 (将图片信息简化为文字占位符)
+        if examples:
+            full_text_prompt.append("\n\nHere are a few examples:")
+            for i, (user_example, assistant_example, _) in enumerate(examples):
+                full_text_prompt.append(f"\n--- Example {i + 1} ---")
+                full_text_prompt.append(f"Observation (with an example image):\n{user_example}")
+                full_text_prompt.append(f"Action:\n{assistant_example}")
+            full_text_prompt.append("\n--- End of Examples ---")
+
+        # 添加当前的任务信息
+        full_text_prompt.append("\nNow, make a prediction for the current situation:")
+        full_text_prompt.append(current)  # 'current' 包含了 objective, url, observation 等
+
+        # 组合成最终的文本
+        final_text = "\n".join(full_text_prompt)
+
+        # 2. 准备 content 列表，包含文本和所有图片
+        # ----------------------------------------------------
+        content = []
+
+        # 首先添加聚合后的所有文本
+        content.append({"type": "text", "text": final_text})
+
+        # 然后添加当前页面的截图
+        content.append({
+            "type": "image_url",
+            "image_url": {"url": pil_to_b64(page_screenshot_img)}
+        })
+
+        # 最后添加任务输入的图片（如果有）
+        for image in images:
+            content.append({
+                "type": "image_url",
+                "image_url": {"url": pil_to_b64(image)}
+            })
+
+        # 3. 构建并返回最终的 message 结构
+        # ----------------------------------------------------
+        # 整个 prompt 就是一个 user message
+        message = [{"role": "user", "content": content}]
+
+        # (调试用) 打印出最终的结构，确认它是否符合预期
+        # import json
+        # print("----------- Qwen-VL PROMPT -----------")
+        # # # 只打印结构，不打印base64长字符串
+        # debug_content = [{"type": c["type"], "text": c.get("text", "...")} for c in content]
+        # print(json.dumps([{"role": "user", "content": debug_content}], indent=2))
+        # print("--------------------------------------")
+
+        return message
