@@ -13,7 +13,7 @@ is_answering = False   # 判断是否结束思考过程并开始回复
 enable_thinking = False
 # 创建聊天完成请求
 completion = client.chat.completions.create(
-    model="qwen3-vl-plus",
+    model="qwen3-vl-flash",
     messages=[
         {
             "role": "user",
